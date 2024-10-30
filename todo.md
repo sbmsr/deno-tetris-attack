@@ -1,6 +1,6 @@
 # todo
 
-- [ ] display a grid
+- [x] display a grid
 - [ ] load tiles bottom up
 - [ ] lose state
 - [ ] display cursor

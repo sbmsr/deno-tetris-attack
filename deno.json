@@ -1,7 +1,5 @@
 {
   "tasks": {
-    "dev": "deno run --watch main.ts"
-  },
-  "imports": {
+    "dev": "deno run --allow-read=index.html --allow-net --watch main.ts"
   }
 }

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module">
+      const width = 6;
+      const height = 12;
+      const squareSize = 50;
+
+      let c = document.getElementById("canvas");
+      c.width = width * squareSize;
+      c.height = height * squareSize;
+
+      var ctx = c.getContext("2d");
+
+      class GridState {
+        #grid;
+
+        constructor() {
+          this.#grid = Array(height).fill(Array(width).fill());
+        }
+
+        get grid() {
+          return this.#grid;
+        }
+      }
+
+      const gs = new GridState();
+      drawGrid(gs);
+
+      function drawGrid(gs) {
+        for (var y = 0; y < gs.grid.length; y++) {
+          for (var x = 0; x < gs.grid[y].length; x++) {
+            drawSquare(x * squareSize, y * squareSize, squareSize);
+          }
+        }
+      }
+
+      function drawSquare(x, y, s) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + s, y);
+        ctx.lineTo(x + s, y + s);
+        ctx.lineTo(x, y + s);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.closePath();
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+  </body>
+</html>

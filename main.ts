@@ -1,3 +1,5 @@
-export default function main() {
-  return 0;
-}
+Deno.serve(async () =>
+  new Response(await Deno.readFile("./index.html"), {
+    headers: { "content-type": "text/html" },
+  })
+);
