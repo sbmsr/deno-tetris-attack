@@ -2,8 +2,8 @@
 
 - [x] display a grid
 - [x] load tiles bottom up
-- [ ] lose state
-- [ ] refactor to group game state + timing
+- [x] refactor to group game state + timing
+- [x] lose state
 - [ ] display cursor
 - [ ] move cursor
 - [ ] render unique tiles

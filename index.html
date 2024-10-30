@@ -2,78 +2,123 @@
 <html>
   <head>
     <script type="module">
-      const width = 6;
-      const height = 12;
-      const squareSize = 50;
+      const SQUARE_SIZE = 50;
+      const MS_BETWEEN_RENDERS = 2_000;
+      const [CELL_WIDTH, CELL_HEIGHT] = [6, 12];
+      const [CANVAS_WIDTH, CANVAS_HEIGHT] = [
+        CELL_WIDTH * SQUARE_SIZE,
+        CELL_HEIGHT * SQUARE_SIZE,
+      ];
+      const STARTER_ROWS = 4;
 
-      let c = document.getElementById("canvas");
-      c.width = width * squareSize;
-      c.height = height * squareSize;
-
-      var ctx = c.getContext("2d");
-
-      class GridState {
+      class Game {
         #grid;
         #playing;
+        #ctx;
+        #intervalId = null;
 
         constructor() {
-          this.#grid = Array(height).fill(Array(width).fill());
-          this.#playing = true;
+          this.#playing = false;
+          let canvas = document.getElementById("canvas");
+          canvas.width = CANVAS_WIDTH;
+          canvas.height = CANVAS_HEIGHT;
+          this.#ctx = canvas.getContext("2d");
         }
 
-        get grid() {
-          return this.#grid;
+        resetGrid() {
+          this.#grid = Array(CELL_HEIGHT).fill(Array(CELL_WIDTH).fill());
+          for (let i = 0; i < STARTER_ROWS; i++) {
+            this.appendRow();
+          }
         }
 
-        loadRow() {
-          if (!this.#grid[0].every((x) => x === undefined)) {
-            // top row is not empty, game over
-            this.#playing = false;
-            return;
+        get isGameOver() {
+          return !this.#grid[0].every((x) => x === undefined);
+        }
+
+        start() {
+          if (this.#playing) {
+            return; // can't start a running game
           }
 
+          // start
+          this.#playing = true;
+          this.resetGrid();
+          this.drawGrid();
+
+          // game loop
+          this.#intervalId = setInterval(() => {
+            if (this.isGameOver) {
+              this.stop();
+              this.renderGameOver();
+            } else {
+              this.appendRow();
+              this.drawGrid();
+            }
+          }, MS_BETWEEN_RENDERS);
+        }
+
+        stop() {
+          this.#playing = false;
+          clearInterval(this.#intervalId);
+          this.clearCanvas();
+        }
+
+        renderGameOver() {
+          this.#ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+          this.#ctx.fillStyle = "red";
+          this.#ctx.font = "48px Arial";
+          this.#ctx.textAlign = "center";
+          this.#ctx.textBaseline = "middle";
+          this.#ctx.fillText("Game Over", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+        }
+
+        appendRow() {
           // shed top row
           this.#grid.shift();
 
           // add row to bottom
-          this.#grid.push(Array(width).fill("r"));
+          this.#grid.push(Array(CELL_WIDTH).fill("r"));
         }
-      }
 
-      const gs = new GridState();
-      drawGrid(gs);
+        clearCanvas() {
+          this.#ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        }
 
-      setInterval(() => {
-        gs.loadRow();
-        drawGrid(gs);
-      }, 3000);
+        drawGrid() {
+          this.clearCanvas();
+          for (var y = 0; y < this.#grid.length; y++) {
+            for (var x = 0; x < this.#grid[y].length; x++) {
+              this.drawSquare(
+                x * SQUARE_SIZE,
+                y * SQUARE_SIZE,
+                this.#grid[y][x],
+              );
+            }
+          }
+        }
 
-      function drawGrid(gs) {
-        ctx.clearRect(0, 0, c.width, c.height);
-        for (var y = 0; y < gs.grid.length; y++) {
-          for (var x = 0; x < gs.grid[y].length; x++) {
-            drawSquare(x * squareSize, y * squareSize, squareSize, gs.grid[y][x]);
+        drawSquare(x, y, c) {
+          this.#ctx.beginPath();
+          this.#ctx.moveTo(x, y);
+          this.#ctx.lineTo(x + SQUARE_SIZE, y);
+          this.#ctx.lineTo(x + SQUARE_SIZE, y + SQUARE_SIZE);
+          this.#ctx.lineTo(x, y + SQUARE_SIZE);
+          this.#ctx.lineTo(x, y);
+          this.#ctx.stroke();
+          this.#ctx.closePath();
+          if (c) {
+            this.#ctx.fillStyle = "black";
+            this.#ctx.font = "24px Arial";
+            this.#ctx.textAlign = "center";
+            this.#ctx.textBaseline = "middle";
+            this.#ctx.fillText(c, x + SQUARE_SIZE / 2, y + SQUARE_SIZE / 2);
           }
         }
       }
 
-      function drawSquare(x, y, s, c) {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + s, y);
-        ctx.lineTo(x + s, y + s);
-        ctx.lineTo(x, y + s);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        ctx.closePath();
-        if (c) {
-          ctx.fillStyle = "black";
-          ctx.font = "24px Arial";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(c, x + s / 2, y + s / 2);
-        }
-      }
+      const gs = new Game();
+      gs.start();
     </script>
   </head>
   <body>
