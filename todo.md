@@ -1,8 +1,9 @@
 # todo
 
 - [x] display a grid
-- [ ] load tiles bottom up
+- [x] load tiles bottom up
 - [ ] lose state
+- [ ] refactor to group game state + timing
 - [ ] display cursor
 - [ ] move cursor
 - [ ] render unique tiles
