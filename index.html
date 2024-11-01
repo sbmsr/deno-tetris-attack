@@ -4,13 +4,15 @@
     <script type="module">
       const SQUARE_SIZE = 50;
       const MS_BETWEEN_RENDERS = 20;
-      const MS_BETWEEN_ROW_INSERT = 2_000;
+      const MS_BETWEEN_ROW_INSERT = 3_000;
       const [CELL_WIDTH, CELL_HEIGHT] = [6, 12];
       const [CANVAS_WIDTH, CANVAS_HEIGHT] = [
         CELL_WIDTH * SQUARE_SIZE,
         CELL_HEIGHT * SQUARE_SIZE,
       ];
       const STARTER_ROWS = 4;
+
+      const tileOptions = ["z", "i", "e", "w", "a"]
 
       class Game {
         #grid;
@@ -101,12 +103,22 @@
           this.#ctx.fillText("Game Over", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
         }
 
+        generateRandomRow(l = CELL_WIDTH) {
+          let row = Array(l)
+
+          for (let idx = 0; idx < l; idx++) {
+            row[idx] = tileOptions[crypto.getRandomValues(new Uint32Array(1))[0] % tileOptions.length]
+          }
+
+          return row
+        }
+
         appendRow() {
           // shed top row
           this.#grid.shift();
 
           // add row to bottom
-          this.#grid.push(Array(CELL_WIDTH).fill("r"));
+          this.#grid.push(this.generateRandomRow());
         }
 
         clearCanvas() {
