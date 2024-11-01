@@ -15,6 +15,7 @@
         #grid;
         #playing;
         #ctx;
+        #cursor;
         #intervalId = null;
 
         constructor() {
@@ -30,6 +31,7 @@
           for (let i = 0; i < STARTER_ROWS; i++) {
             this.appendRow();
           }
+          this.#cursor = [CELL_HEIGHT - STARTER_ROWS, Math.floor(CELL_WIDTH/2 - 1)]
         }
 
         get isGameOver() {
@@ -45,6 +47,24 @@
           this.#playing = true;
           this.resetGrid();
           this.drawGrid();
+
+          document.addEventListener("keydown", (event) => {
+            if (!this.#playing) return;
+            switch (event.key) {
+              case "ArrowUp":
+                this.moveCursor("up");
+                break;
+              case "ArrowDown":
+                this.moveCursor("down");
+                break;
+              case "ArrowLeft":
+                this.moveCursor("left");
+                break;
+              case "ArrowRight":
+                this.moveCursor("right");
+                break;
+            }
+          });
 
           // game loop
           this.#intervalId = setInterval(() => {
@@ -85,25 +105,72 @@
           this.#ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         }
 
+        allowedCursorMoves() {
+          let directions = []
+          if (this.#cursor[0] > 0) {
+            directions.push("up")
+          }
+
+          if (this.#cursor[0] < this.#grid.length - 1) {
+            directions.push("down")
+          }
+
+          if (this.#cursor[1] > 0) {
+            directions.push("left")
+          }
+
+          if (this.#cursor[1] < this.#grid[this.#cursor[0]].length - 2) {
+            directions.push("right")
+          }
+          
+          return directions
+        }
+
+        moveCursor(direction) {
+          if (!this.allowedCursorMoves().includes(direction)) {
+            return; // can't move there
+          }
+          switch(direction) {
+            case "up" :
+              this.#cursor[0]--
+              break;
+            case "down":
+              this.#cursor[0]++;
+              break;
+            case "left":
+              this.#cursor[1]--;
+              break;
+            case "right":
+              this.#cursor[1]++;
+              break;
+          }
+        }
+
         drawGrid() {
           this.clearCanvas();
           for (var y = 0; y < this.#grid.length; y++) {
             for (var x = 0; x < this.#grid[y].length; x++) {
+              // draw tile
               this.drawSquare(
                 x * SQUARE_SIZE,
                 y * SQUARE_SIZE,
                 this.#grid[y][x],
               );
+              // draw cursor
+              if ((this.#cursor[0] === y && this.#cursor[1] === x)) {
+                this.drawSquare(x * SQUARE_SIZE + 10, y * SQUARE_SIZE + 10, null, SQUARE_SIZE - 20)
+                this.drawSquare((x + 1) * SQUARE_SIZE + 10, y * SQUARE_SIZE + 10, null, SQUARE_SIZE - 20)
+              }
             }
           }
         }
 
-        drawSquare(x, y, c) {
+        drawSquare(x, y, c = null, s = SQUARE_SIZE) {
           this.#ctx.beginPath();
           this.#ctx.moveTo(x, y);
-          this.#ctx.lineTo(x + SQUARE_SIZE, y);
-          this.#ctx.lineTo(x + SQUARE_SIZE, y + SQUARE_SIZE);
-          this.#ctx.lineTo(x, y + SQUARE_SIZE);
+          this.#ctx.lineTo(x + s, y);
+          this.#ctx.lineTo(x + s, y + s);
+          this.#ctx.lineTo(x, y + s);
           this.#ctx.lineTo(x, y);
           this.#ctx.stroke();
           this.#ctx.closePath();
@@ -112,7 +179,7 @@
             this.#ctx.font = "24px Arial";
             this.#ctx.textAlign = "center";
             this.#ctx.textBaseline = "middle";
-            this.#ctx.fillText(c, x + SQUARE_SIZE / 2, y + SQUARE_SIZE / 2);
+            this.#ctx.fillText(c, x + s / 2, y + s / 2);
           }
         }
       }
