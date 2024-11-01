@@ -8,6 +8,6 @@
 - [x] move cursor
 - [x] speed up cursor rendering
 - [x] render unique tiles
-- [ ] on button press, swap tiles
+- [x] on button press, swap tiles
 - [ ] score tiles
 - [ ] win state

@@ -18,7 +18,7 @@
         #grid;
         #playing;
         #ctx;
-        #cursor;
+        #cursor; // [y,x]
         #intervalId = null;
         #time_ms = 0;
 
@@ -66,6 +66,9 @@
                 break;
               case "ArrowRight":
                 this.moveCursor("right");
+                break;
+              case " ":
+                this.swapTiles()
                 break;
             }
           });
@@ -164,6 +167,14 @@
               this.#cursor[1]++;
               break;
           }
+        }
+
+        swapTiles() {
+          const [y,x] = this.#cursor
+          let left = this.#grid[y][x]
+          let right = this.#grid[y][x+1]
+          this.#grid[y][x] = right
+          this.#grid[y][x+1] = left
         }
 
         drawGrid() {
