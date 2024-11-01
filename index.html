@@ -12,7 +12,7 @@
       ];
       const STARTER_ROWS = 4;
 
-      const tileOptions = ["z", "i", "e", "w", "a"]
+      const tileOptions = ["z", "i", "e", "w", "a"];
 
       class Game {
         #grid;
@@ -35,7 +35,10 @@
           for (let i = 0; i < STARTER_ROWS; i++) {
             this.appendRow();
           }
-          this.#cursor = [CELL_HEIGHT - STARTER_ROWS, Math.floor(CELL_WIDTH/2 - 1)]
+          this.#cursor = [
+            CELL_HEIGHT - STARTER_ROWS,
+            Math.floor(CELL_WIDTH / 2 - 1),
+          ];
         }
 
         get isGameOver() {
@@ -68,7 +71,7 @@
                 this.moveCursor("right");
                 break;
               case " ":
-                this.swapTiles()
+                this.swapTiles();
                 break;
             }
           });
@@ -78,10 +81,10 @@
             if (this.isGameOver) {
               this.stop();
               this.renderGameOver();
-              this.#time_ms = 0
+              this.#time_ms = 0;
             } else {
               this.drawGrid();
-              this.#time_ms += MS_BETWEEN_RENDERS
+              this.#time_ms += MS_BETWEEN_RENDERS;
             }
 
             // add row if its time to
@@ -106,14 +109,27 @@
           this.#ctx.fillText("Game Over", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
         }
 
+        getRandomElement(arr) {
+          return arr[crypto.getRandomValues(new Uint32Array(1))[0] % arr.length];
+        }
+
         generateRandomRow(l = CELL_WIDTH) {
-          let row = Array(l)
+          let row = Array(l);
 
           for (let idx = 0; idx < l; idx++) {
-            row[idx] = tileOptions[crypto.getRandomValues(new Uint32Array(1))[0] % tileOptions.length]
+            let newTile = this.getRandomElement(tileOptions);
+            if (idx > 1) {
+              let [leftleft, left] = [row[idx - 2], row[idx - 1]];
+              if (newTile === leftleft && newTile === left) {
+                newTile = this.getRandomElement(
+                  tileOptions.filter((tile) => tile === newTile),
+                );
+              }
+            }
+            row[idx] = newTile;
           }
 
-          return row
+          return row;
         }
 
         appendRow() {
@@ -129,33 +145,33 @@
         }
 
         allowedCursorMoves() {
-          let directions = []
+          let directions = [];
           if (this.#cursor[0] > 0) {
-            directions.push("up")
+            directions.push("up");
           }
 
           if (this.#cursor[0] < this.#grid.length - 1) {
-            directions.push("down")
+            directions.push("down");
           }
 
           if (this.#cursor[1] > 0) {
-            directions.push("left")
+            directions.push("left");
           }
 
           if (this.#cursor[1] < this.#grid[this.#cursor[0]].length - 2) {
-            directions.push("right")
+            directions.push("right");
           }
-          
-          return directions
+
+          return directions;
         }
 
         moveCursor(direction) {
           if (!this.allowedCursorMoves().includes(direction)) {
             return; // can't move there
           }
-          switch(direction) {
-            case "up" :
-              this.#cursor[0]--
+          switch (direction) {
+            case "up":
+              this.#cursor[0]--;
               break;
             case "down":
               this.#cursor[0]++;
@@ -170,11 +186,11 @@
         }
 
         swapTiles() {
-          const [y,x] = this.#cursor
-          let left = this.#grid[y][x]
-          let right = this.#grid[y][x+1]
-          this.#grid[y][x] = right
-          this.#grid[y][x+1] = left
+          const [y, x] = this.#cursor;
+          let left = this.#grid[y][x];
+          let right = this.#grid[y][x + 1];
+          this.#grid[y][x] = right;
+          this.#grid[y][x + 1] = left;
         }
 
         drawGrid() {
@@ -189,8 +205,18 @@
               );
               // draw cursor
               if ((this.#cursor[0] === y && this.#cursor[1] === x)) {
-                this.drawSquare(x * SQUARE_SIZE + 10, y * SQUARE_SIZE + 10, null, SQUARE_SIZE - 20)
-                this.drawSquare((x + 1) * SQUARE_SIZE + 10, y * SQUARE_SIZE + 10, null, SQUARE_SIZE - 20)
+                this.drawSquare(
+                  x * SQUARE_SIZE + 10,
+                  y * SQUARE_SIZE + 10,
+                  null,
+                  SQUARE_SIZE - 20,
+                );
+                this.drawSquare(
+                  (x + 1) * SQUARE_SIZE + 10,
+                  y * SQUARE_SIZE + 10,
+                  null,
+                  SQUARE_SIZE - 20,
+                );
               }
             }
           }
