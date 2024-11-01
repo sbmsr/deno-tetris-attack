@@ -3,7 +3,8 @@
   <head>
     <script type="module">
       const SQUARE_SIZE = 50;
-      const MS_BETWEEN_RENDERS = 2_000;
+      const MS_BETWEEN_RENDERS = 20;
+      const MS_BETWEEN_ROW_INSERT = 2_000;
       const [CELL_WIDTH, CELL_HEIGHT] = [6, 12];
       const [CANVAS_WIDTH, CANVAS_HEIGHT] = [
         CELL_WIDTH * SQUARE_SIZE,
@@ -17,6 +18,7 @@
         #ctx;
         #cursor;
         #intervalId = null;
+        #time_ms = 0;
 
         constructor() {
           this.#playing = false;
@@ -71,9 +73,15 @@
             if (this.isGameOver) {
               this.stop();
               this.renderGameOver();
+              this.#time_ms = 0
             } else {
-              this.appendRow();
               this.drawGrid();
+              this.#time_ms += MS_BETWEEN_RENDERS
+            }
+
+            // add row if its time to
+            if (this.#time_ms % MS_BETWEEN_ROW_INSERT === 0) {
+              this.appendRow();
             }
           }, MS_BETWEEN_RENDERS);
         }

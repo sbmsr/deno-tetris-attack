@@ -6,7 +6,7 @@
 - [x] lose state
 - [x] display cursor
 - [x] move cursor
-- [ ] render cursor on press
+- [x] speed up cursor rendering
 - [ ] render unique tiles
 - [ ] on button press, swap tiles
 - [ ] score tiles
