@@ -76,6 +76,9 @@ class Game {
         case "ArrowRight":
           this.moveCursor("right");
           break;
+        case "r":
+          this.resetGrid();
+          break;
         case " ": {
           this.swapTiles();
           let prevScore;

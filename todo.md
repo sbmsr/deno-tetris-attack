@@ -11,7 +11,7 @@
 - [x] on button press, swap tiles
 - [x] don't render tiles on the same row that should collapse (e.x. - aaa...)
 - [x] score tiles
-- [ ] restart button
+- [x] restart button
 - [ ] expose methods to play programmatically
   - [ ] restart
   - [ ] controls (arrows, space)
