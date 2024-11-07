@@ -11,6 +11,12 @@
 - [x] on button press, swap tiles
 - [x] don't render tiles on the same row that should collapse (e.x. - aaa...)
 - [x] score tiles
+- [ ] restart button
+- [ ] expose methods to play programmatically
+  - [ ] restart
+  - [ ] controls (arrows, space)
+  - [ ] get game state
+  - [ ] get score
 - [ ] don't render stacked tiles that should collapse (e.x. a\na\na...)
 - [ ] sometimes tiles are put in configuration that should score, but they dont
       (aaba => aaab, instead of ___b )
