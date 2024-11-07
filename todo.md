@@ -12,15 +12,15 @@
 - [x] don't render tiles on the same row that should collapse (e.x. - aaa...)
 - [x] score tiles
 - [x] restart button
-- [ ] expose methods to play programmatically
-  - [ ] restart
-  - [ ] controls (arrows, space)
-  - [ ] get game state
-  - [ ] get score
+- [x] expose methods to play programmatically
+  - [x] restart
+  - [x] controls (arrows, space)
+  - [x] get game state
+  - [x] get score
 - [ ] don't render stacked tiles that should collapse (e.x. a\na\na...)
 - [ ] sometimes tiles are put in configuration that should score, but they dont
       (aaba => aaab, instead of ___b )
-- [ ] show the score
+- [x] show the score
 
 # ???
 

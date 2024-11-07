@@ -24,6 +24,22 @@ class Game {
   #time_ms = 0;
   #score = 0;
 
+  get score(): number {
+    return this.#score;
+  }
+
+  get cursor(): Cursor {
+    return this.#cursor;
+  }
+
+  get playing(): boolean {
+    return this.#playing;
+  }
+
+  get grid(): Grid {
+    return this.#grid;
+  }
+
   constructor() {
     this.#playing = false;
     const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
@@ -32,7 +48,7 @@ class Game {
     this.#ctx = canvas.getContext("2d")!;
   }
 
-  resetGrid() {
+  private resetGrid() {
     this.#grid = Array(CELL_HEIGHT).fill(Array(CELL_WIDTH).fill(undefined));
     for (let i = 0; i < STARTER_ROWS; i++) {
       const [newGrid, newCursor] = this.appendRow(this.#grid, this.#cursor);
@@ -45,7 +61,7 @@ class Game {
     ];
   }
 
-  get isGameOver() {
+  private get isGameOver() {
     return !this.#grid[0].every((x) => x === undefined);
   }
 
@@ -77,7 +93,8 @@ class Game {
           this.moveCursor("right");
           break;
         case "r":
-          this.resetGrid();
+          this.stop();
+          this.start();
           break;
         case " ": {
           this.swapTiles();
@@ -93,6 +110,12 @@ class Game {
             this.#score += score;
             this.applyGravity();
           }
+          const scoreElement = document.getElementById('score-indicator');
+          if (scoreElement) {
+            scoreElement.innerText = `Score: ${this.#score}`;
+          } else {
+            console.error('Score indicator element not found!');
+          }      
           break;
         }
       }
@@ -116,7 +139,7 @@ class Game {
     }, MS_BETWEEN_RENDERS);
   }
 
-  scoreTiles(
+  private scoreTiles(
     grid: Tile[][],
     CELL_HEIGHT: number,
     CELL_WIDTH: number,
@@ -128,9 +151,9 @@ class Game {
       () => Array(CELL_WIDTH).fill(false),
     );
 
-    // Helper function to calculate combo scores
-    const calculateComboScore = (length: number) => {
-      if (length <= 3) return 0;
+    const calculateScore = (length: number) => {
+      if (length < 3) return 0;
+      if (length === 3) return 3;
       if (length === 4) return 20;
       if (length === 5) return 30;
       if (length === 6) return 50;
@@ -151,9 +174,8 @@ class Game {
 
         // Check if sequence length is 3 or more
         if (j - i >= 3) {
-          score += calculateComboScore(j - i);
+          score += calculateScore(j - i);
           for (let x = i; x < j; x++) {
-            console.log("scoring!");
             scoredTiles[y][x] = true;
           }
         }
@@ -180,7 +202,7 @@ class Game {
 
         // Check if sequence length is 3 or more
         if (j - i >= 3) {
-          score += calculateComboScore(j - i);
+          score += calculateScore(j - i);
           for (let y = i; y < j; y++) {
             scoredTiles[y][x] = true;
           }
@@ -206,7 +228,7 @@ class Game {
     }
 
     // Log before and after grid and the score
-    console.log(
+    console.debug(
       `Before:\n${grid.map((row) => row.join(" ")).join("\n")}\n\nAfter:\n${
         newGrid.map((row) => row.join(" ")).join("\n")
       }\n\nScored Tiles:\n${
@@ -218,7 +240,7 @@ class Game {
     return [newGrid, score];
   }
 
-  applyGravity() {
+  private applyGravity() {
     let x, y;
     for (x = 0; x < CELL_WIDTH; x++) {
       let undefinedIdx;
@@ -239,13 +261,13 @@ class Game {
     }
   }
 
-  stop() {
+  private stop() {
     this.#playing = false;
     clearInterval(this.#intervalId ?? undefined);
     this.clearCanvas();
   }
 
-  renderGameOver() {
+  private renderGameOver() {
     this.#ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     this.#ctx.fillStyle = "red";
     this.#ctx.font = "48px Arial";
@@ -254,11 +276,11 @@ class Game {
     this.#ctx.fillText("Game Over", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
   }
 
-  getRandomElement<T>(arr: readonly T[]): T {
+  private getRandomElement<T>(arr: readonly T[]): T {
     return arr[crypto.getRandomValues(new Uint32Array(1))[0] % arr.length];
   }
 
-  generateRandomRow(l = CELL_WIDTH) {
+  private generateRandomRow(l = CELL_WIDTH) {
     const row = Array(l);
 
     for (let idx = 0; idx < l; idx++) {
@@ -277,7 +299,7 @@ class Game {
     return row;
   }
 
-  appendRow(
+  private appendRow(
     grid: Tile[][],
     cursor: [number, number],
   ): [Tile[][], [number, number]] {
@@ -306,11 +328,11 @@ class Game {
     return [clonedGrid, clonedCursor];
   }
 
-  clearCanvas() {
+  private clearCanvas() {
     this.#ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   }
 
-  allowedCursorMoves() {
+  private allowedCursorMoves() {
     const directions = [];
     if (this.#cursor[0] > 0) {
       directions.push("up");
@@ -351,7 +373,7 @@ class Game {
     }
   }
 
-  swapTiles() {
+  private swapTiles() {
     const [y, x] = this.#cursor;
     const left = this.#grid[y][x];
     const right = this.#grid[y][x + 1];
@@ -359,7 +381,7 @@ class Game {
     this.#grid[y][x + 1] = left;
   }
 
-  drawGrid() {
+  private drawGrid() {
     this.clearCanvas();
     let x, y;
     for (y = 0; y < this.#grid.length; y++) {
@@ -389,7 +411,12 @@ class Game {
     }
   }
 
-  drawSquare(x: number, y: number, c: Tile | null = null, s = SQUARE_SIZE) {
+  private drawSquare(
+    x: number,
+    y: number,
+    c: Tile | null = null,
+    s = SQUARE_SIZE,
+  ) {
     this.#ctx.beginPath();
     this.#ctx.moveTo(x, y);
     this.#ctx.lineTo(x + s, y);
@@ -408,5 +435,7 @@ class Game {
   }
 }
 
-const gs = new Game();
-gs.start();
+//@ts-ignore
+globalThis.gs = new Game();
+//@ts-ignore
+globalThis.gs.start();
