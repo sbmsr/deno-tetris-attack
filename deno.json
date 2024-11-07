@@ -1,5 +1,9 @@
 {
   "tasks": {
-    "dev": "deno run --allow-read=index.html --allow-net --watch main.ts"
+    "dev": "deno run --allow-read --allow-net --allow-env --allow-write --watch main.ts"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["dom", "dom.iterable", "esnext", "deno.ns"]
   }
 }
