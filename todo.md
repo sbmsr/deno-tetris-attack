@@ -17,10 +17,14 @@
   - [x] controls (arrows, space)
   - [x] get game state
   - [x] get score
+- [x] show the score
+- [ ] qTable has nulls in wrong place
+- [ ] qTable needs to make sense
+
+# bugs
 - [ ] don't render stacked tiles that should collapse (e.x. a\na\na...)
 - [ ] sometimes tiles are put in configuration that should score, but they dont
       (aaba => aaab, instead of ___b )
-- [x] show the score
 
 # ???
 

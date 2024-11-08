@@ -1,7 +1,12 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <script type="module" src="src/game.js"></script>
+  <script type="module">
+    import { Game } from './game.ts';
+
+    const game = new Game();
+    game.start();
+  </script>
   </head>
   <body>
     <canvas id="canvas"></canvas>

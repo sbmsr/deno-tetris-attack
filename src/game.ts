@@ -1,24 +1,50 @@
-export const tileOptions = ["z", "i", "e", "w", "a"] as const;
+import { getRandomNumber } from "./lib.ts";
+
+// export const tileOptions = ["z", "i", "e", "w", "a"] as const;
+export const tileOptions = ["z", "a"] as const;
 export type Tile = typeof tileOptions[number] | undefined;
 
 export type Direction = "up" | "down" | "left" | "right";
 export type Grid = Tile[][];
 export type Cursor = [number, number]; // [y,x]
 
-const SQUARE_SIZE = 50;
-const MS_BETWEEN_RENDERS = 20;
-const MS_BETWEEN_ROW_INSERT = 3_000;
-const [CELL_HEIGHT, CELL_WIDTH] = [12, 6];
-const [CANVAS_HEIGHT, CANVAS_WIDTH] = [
-  CELL_HEIGHT * SQUARE_SIZE,
-  CELL_WIDTH * SQUARE_SIZE,
+export const MOVES = [
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "r",
+  " ",
 ];
-const STARTER_ROWS = 4;
 
-class Game {
+
+export type GameConfig = {
+  SQUARE_SIZE: number;
+  MS_BETWEEN_RENDERS: number;
+  MS_BETWEEN_ROW_INSERT: number;
+  CELL_HEIGHT: number;
+  CELL_WIDTH: number;
+  CANVAS_HEIGHT: number;
+  CANVAS_WIDTH: number;
+  STARTER_ROWS: number;
+};
+
+export const DefaultGameConfig: GameConfig = Object.freeze({
+  SQUARE_SIZE: 50,
+  MS_BETWEEN_RENDERS: 20,
+  MS_BETWEEN_ROW_INSERT: 3_000,
+  CELL_HEIGHT: 12,
+  CELL_WIDTH: 6,
+  CANVAS_HEIGHT: 600,
+  CANVAS_WIDTH: 300,
+  STARTER_ROWS: 4,
+});
+
+export class Game {
+  #config: GameConfig;
   #grid: Tile[][] = [];
   #playing = false;
-  #ctx: CanvasRenderingContext2D;
+  #ctx: CanvasRenderingContext2D | undefined; // if undefined, we're headless
   #cursor: [number, number] = [0, 0]; // [y,x]
   #intervalId: number | undefined;
   #time_ms = 0;
@@ -40,30 +66,78 @@ class Game {
     return this.#grid;
   }
 
-  constructor() {
+  constructor(config = DefaultGameConfig, headless: boolean) {
+    this.#config = config
     this.#playing = false;
+    if (headless) {return}
     const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
-    canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
+    canvas.width = this.#config.CANVAS_WIDTH;
+    canvas.height = this.#config.CANVAS_HEIGHT;
     this.#ctx = canvas.getContext("2d")!;
   }
 
   private resetGrid() {
-    this.#grid = Array(CELL_HEIGHT).fill(Array(CELL_WIDTH).fill(undefined));
-    for (let i = 0; i < STARTER_ROWS; i++) {
+    this.#grid = Array(this.#config.CELL_HEIGHT).fill(Array(this.#config.CELL_WIDTH).fill(undefined));
+    for (let i = 0; i < this.#config.STARTER_ROWS; i++) {
       const [newGrid, newCursor] = this.appendRow(this.#grid, this.#cursor);
       this.#grid = newGrid;
       this.#cursor = newCursor;
     }
     this.#cursor = [
-      CELL_HEIGHT - STARTER_ROWS,
-      Math.floor(CELL_WIDTH / 2 - 1),
+      this.#config.CELL_HEIGHT - this.#config.STARTER_ROWS,
+      Math.floor(this.#config.CELL_WIDTH / 2 - 1),
     ];
   }
 
-  private get isGameOver() {
+  public get isGameOver() {
     return !this.#grid[0].every((x) => x === undefined);
   }
+
+  public handleAction = (event: KeyboardEvent) => {
+    if (!this.#playing) return;
+    switch (event.key) {
+      case "ArrowUp":
+        this.moveCursor("up");
+        break;
+      case "ArrowDown":
+        this.moveCursor("down");
+        break;
+      case "ArrowLeft":
+        this.moveCursor("left");
+        break;
+      case "ArrowRight":
+        this.moveCursor("right");
+        break;
+      case "r":
+        this.restart()
+        break;
+      case " ": {
+        this.swapTiles();
+        let prevScore;
+        while (this.#score !== prevScore) {
+          prevScore = this.#score;
+          const [newGrid, score] = this.scoreTiles(
+            this.#grid,
+            this.#config.CELL_HEIGHT,
+            this.#config.CELL_WIDTH,
+          );
+          this.#grid = newGrid;
+          this.#score += score;
+          this.applyGravity();
+        }
+        if (this.#ctx !== undefined) {
+          const scoreElement = document.getElementById("score-indicator");
+          if (scoreElement) {
+            scoreElement.innerText = `Score: ${this.#score}`;
+          } else {
+            console.error("Score indicator element not found!");
+          }
+        }
+        
+        break;
+      }
+    }
+  };
 
   start() {
     if (this.#playing) {
@@ -77,57 +151,17 @@ class Game {
     this.resetGrid();
     this.drawGrid();
 
-    document.addEventListener("keydown", (event) => {
-      if (!this.#playing) return;
-      switch (event.key) {
-        case "ArrowUp":
-          this.moveCursor("up");
-          break;
-        case "ArrowDown":
-          this.moveCursor("down");
-          break;
-        case "ArrowLeft":
-          this.moveCursor("left");
-          break;
-        case "ArrowRight":
-          this.moveCursor("right");
-          break;
-        case "r":
-          this.stop();
-          this.start();
-          break;
-        case " ": {
-          this.swapTiles();
-          let prevScore;
-          while (this.#score !== prevScore) {
-            prevScore = this.#score;
-            const [newGrid, score] = this.scoreTiles(
-              this.#grid,
-              CELL_HEIGHT,
-              CELL_WIDTH,
-            );
-            this.#grid = newGrid;
-            this.#score += score;
-            this.applyGravity();
-          }
-          const scoreElement = document.getElementById('score-indicator');
-          if (scoreElement) {
-            scoreElement.innerText = `Score: ${this.#score}`;
-          } else {
-            console.error('Score indicator element not found!');
-          }      
-          break;
-        }
-      }
-    });
+    if (this.#ctx !== undefined && document) {
+      document.addEventListener("keydown", (event) => this.handleAction(event));
+    }
 
     // game loop
     this.#intervalId = setInterval(() => {
       this.drawGrid();
-      this.#time_ms += MS_BETWEEN_RENDERS;
+      this.#time_ms += this.#config.MS_BETWEEN_RENDERS;
 
       // add row if its time to
-      if (this.#time_ms % MS_BETWEEN_ROW_INSERT === 0) {
+      if (this.#time_ms % this.#config.MS_BETWEEN_ROW_INSERT === 0) {
         if (this.isGameOver) {
           this.stop();
           this.renderGameOver();
@@ -136,7 +170,7 @@ class Game {
         this.#grid = newGrid;
         this.#cursor = newCursor;
       }
-    }, MS_BETWEEN_RENDERS);
+    }, this.#config.MS_BETWEEN_RENDERS);
   }
 
   private scoreTiles(
@@ -228,23 +262,23 @@ class Game {
     }
 
     // Log before and after grid and the score
-    console.debug(
-      `Before:\n${grid.map((row) => row.join(" ")).join("\n")}\n\nAfter:\n${
-        newGrid.map((row) => row.join(" ")).join("\n")
-      }\n\nScored Tiles:\n${
-        scoredTiles.map((row) => row.map((tile) => tile.toString()).join(" "))
-          .join("\n")
-      }\n\nScore: ${score}`,
-    );
+    // console.debug(
+    //   `Before:\n${grid.map((row) => row.join(" ")).join("\n")}\n\nAfter:\n${
+    //     newGrid.map((row) => row.join(" ")).join("\n")
+    //   }\n\nScored Tiles:\n${
+    //     scoredTiles.map((row) => row.map((tile) => tile.toString()).join(" "))
+    //       .join("\n")
+    //   }\n\nScore: ${score}`,
+    // );
 
     return [newGrid, score];
   }
 
   private applyGravity() {
     let x, y;
-    for (x = 0; x < CELL_WIDTH; x++) {
+    for (x = 0; x < this.#config.CELL_WIDTH; x++) {
       let undefinedIdx;
-      for (y = CELL_HEIGHT - 1; y >= 0; y--) {
+      for (y = this.#config.CELL_HEIGHT - 1; y >= 0; y--) {
         if (this.#grid[y][x] === undefined && undefinedIdx === undefined) {
           undefinedIdx = y;
         } else if (
@@ -261,6 +295,11 @@ class Game {
     }
   }
 
+  public restart() {
+    this.stop()
+    this.start()
+  }
+
   private stop() {
     this.#playing = false;
     clearInterval(this.#intervalId ?? undefined);
@@ -268,19 +307,20 @@ class Game {
   }
 
   private renderGameOver() {
-    this.#ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    if(this.#ctx === undefined) return
+    this.#ctx.clearRect(0, 0, this.#config.CANVAS_WIDTH, this.#config.CANVAS_HEIGHT);
     this.#ctx.fillStyle = "red";
     this.#ctx.font = "48px Arial";
     this.#ctx.textAlign = "center";
     this.#ctx.textBaseline = "middle";
-    this.#ctx.fillText("Game Over", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    this.#ctx.fillText("Game Over", this.#config.CANVAS_WIDTH / 2, this.#config.CANVAS_HEIGHT / 2);
   }
 
   private getRandomElement<T>(arr: readonly T[]): T {
-    return arr[crypto.getRandomValues(new Uint32Array(1))[0] % arr.length];
+    return arr[getRandomNumber() % arr.length];
   }
 
-  private generateRandomRow(l = CELL_WIDTH) {
+  private generateRandomRow(l = this.#config.CELL_WIDTH) {
     const row = Array(l);
 
     for (let idx = 0; idx < l; idx++) {
@@ -309,12 +349,23 @@ class Game {
 
     let row;
     let score = 0;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 100;
+
     do {
       row = this.generateRandomRow();
       const bottom3Rows = clonedGrid.slice(-2);
       bottom3Rows.push(row);
-      const [_, newScore] = this.scoreTiles(bottom3Rows, 3, CELL_WIDTH);
+      const [_, newScore] = this.scoreTiles(bottom3Rows, 3, this.#config.CELL_WIDTH);
       score = newScore;
+      attempts++;
+      
+      // console.log(`Attempt ${attempts}: Generated row with score ${score}`);
+      
+      if (attempts >= MAX_ATTEMPTS) {
+        console.warn('Failed to generate valid row after max attempts');
+        break;
+      }
     } while (score !== 0);
 
     clonedGrid.push(row);
@@ -329,7 +380,7 @@ class Game {
   }
 
   private clearCanvas() {
-    this.#ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    this.#ctx?.clearRect(0, 0, this.#config.CANVAS_WIDTH, this.#config.CANVAS_HEIGHT);
   }
 
   private allowedCursorMoves() {
@@ -382,29 +433,32 @@ class Game {
   }
 
   private drawGrid() {
+    if (this.#ctx === undefined) {
+      return
+    }
     this.clearCanvas();
     let x, y;
     for (y = 0; y < this.#grid.length; y++) {
       for (x = 0; x < this.#grid[y].length; x++) {
         // draw tile
         this.drawSquare(
-          x * SQUARE_SIZE,
-          y * SQUARE_SIZE,
+          x * this.#config.SQUARE_SIZE,
+          y * this.#config.SQUARE_SIZE,
           this.#grid[y][x],
         );
         // draw cursor
         if ((this.#cursor[0] === y && this.#cursor[1] === x)) {
           this.drawSquare(
-            x * SQUARE_SIZE + 10,
-            y * SQUARE_SIZE + 10,
+            x * this.#config.SQUARE_SIZE + 10,
+            y * this.#config.SQUARE_SIZE + 10,
             null,
-            SQUARE_SIZE - 20,
+            this.#config.SQUARE_SIZE - 20,
           );
           this.drawSquare(
-            (x + 1) * SQUARE_SIZE + 10,
-            y * SQUARE_SIZE + 10,
+            (x + 1) * this.#config.SQUARE_SIZE + 10,
+            y * this.#config.SQUARE_SIZE + 10,
             null,
-            SQUARE_SIZE - 20,
+            this.#config.SQUARE_SIZE - 20,
           );
         }
       }
@@ -415,8 +469,9 @@ class Game {
     x: number,
     y: number,
     c: Tile | null = null,
-    s = SQUARE_SIZE,
+    s = this.#config.SQUARE_SIZE,
   ) {
+    if (this.#ctx === undefined) return
     this.#ctx.beginPath();
     this.#ctx.moveTo(x, y);
     this.#ctx.lineTo(x + s, y);
@@ -434,8 +489,3 @@ class Game {
     }
   }
 }
-
-//@ts-ignore
-globalThis.gs = new Game();
-//@ts-ignore
-globalThis.gs.start();
