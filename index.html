@@ -3,13 +3,51 @@
   <head>
   <script type="module">
     import { Game } from './game.ts';
+    window.game = new Game();
+    window.game.start();
+  </script>
+  <script type="module">
+    import { Bot } from './bot.ts';
 
-    const game = new Game();
-    game.start();
+    const qTableResponse = await fetch('qTable.txt');
+    const qTableText = await qTableResponse.text();
+    const qTable = new Map(Object.entries(JSON.parse(qTableText)));
+    
+    const botToggle = document.getElementById('bot-toggle');
+    let bot;
+    
+    botToggle.addEventListener('click', async () => {
+      if (!bot) {
+        // Initialize bot with loaded Q-table, 100ms play rate
+        bot = new Bot(qTable, 100, window.game);
+        bot.start();
+        botToggle.textContent = 'Disable Bot Mode';
+      } else {
+        bot.stop()
+        bot = null;
+        botToggle.textContent = 'Enable Bot Mode';
+      }
+    });
   </script>
   </head>
   <body>
     <canvas id="canvas"></canvas>
     <div id="score-indicator">Score: 0</div>
+    <button id="bot-toggle">Enable Bot Mode</button>
+    <style>
+      #bot-toggle {
+        padding: 10px 20px;
+        margin: 10px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+      }
+      #bot-toggle:hover {
+        background-color: #45a049;
+      }
+    </style>
   </body>
 </html>
