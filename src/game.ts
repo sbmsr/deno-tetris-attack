@@ -1,5 +1,6 @@
 import { getRandomNumber } from "./lib.ts";
 
+
 // export const tileOptions = ["z", "i", "e", "w", "a"] as const;
 export const tileOptions = ["z", "a"] as const;
 export type Tile = typeof tileOptions[number] | undefined;
@@ -17,6 +18,7 @@ export const MOVES = [
   " ",
 ];
 
+export const ALLOWED_MOVES = MOVES.filter((a) => a != "r");
 
 export type GameConfig = {
   SQUARE_SIZE: number;
@@ -67,9 +69,9 @@ export class Game {
   }
 
   constructor(config = DefaultGameConfig, headless: boolean) {
-    this.#config = config
+    this.#config = config;
     this.#playing = false;
-    if (headless) {return}
+    if (headless) return;
     const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
     canvas.width = this.#config.CANVAS_WIDTH;
     canvas.height = this.#config.CANVAS_HEIGHT;
@@ -77,7 +79,9 @@ export class Game {
   }
 
   private resetGrid() {
-    this.#grid = Array(this.#config.CELL_HEIGHT).fill(Array(this.#config.CELL_WIDTH).fill(undefined));
+    this.#grid = Array(this.#config.CELL_HEIGHT).fill(
+      Array(this.#config.CELL_WIDTH).fill(undefined),
+    );
     for (let i = 0; i < this.#config.STARTER_ROWS; i++) {
       const [newGrid, newCursor] = this.appendRow(this.#grid, this.#cursor);
       this.#grid = newGrid;
@@ -109,7 +113,7 @@ export class Game {
         this.moveCursor("right");
         break;
       case "r":
-        this.restart()
+        this.restart();
         break;
       case " ": {
         this.swapTiles();
@@ -133,7 +137,7 @@ export class Game {
             console.error("Score indicator element not found!");
           }
         }
-        
+
         break;
       }
     }
@@ -296,8 +300,8 @@ export class Game {
   }
 
   public restart() {
-    this.stop()
-    this.start()
+    this.stop();
+    this.start();
   }
 
   private stop() {
@@ -307,13 +311,22 @@ export class Game {
   }
 
   private renderGameOver() {
-    if(this.#ctx === undefined) return
-    this.#ctx.clearRect(0, 0, this.#config.CANVAS_WIDTH, this.#config.CANVAS_HEIGHT);
+    if (this.#ctx === undefined) return;
+    this.#ctx.clearRect(
+      0,
+      0,
+      this.#config.CANVAS_WIDTH,
+      this.#config.CANVAS_HEIGHT,
+    );
     this.#ctx.fillStyle = "red";
     this.#ctx.font = "48px Arial";
     this.#ctx.textAlign = "center";
     this.#ctx.textBaseline = "middle";
-    this.#ctx.fillText("Game Over", this.#config.CANVAS_WIDTH / 2, this.#config.CANVAS_HEIGHT / 2);
+    this.#ctx.fillText(
+      "Game Over",
+      this.#config.CANVAS_WIDTH / 2,
+      this.#config.CANVAS_HEIGHT / 2,
+    );
   }
 
   private getRandomElement<T>(arr: readonly T[]): T {
@@ -356,14 +369,18 @@ export class Game {
       row = this.generateRandomRow();
       const bottom3Rows = clonedGrid.slice(-2);
       bottom3Rows.push(row);
-      const [_, newScore] = this.scoreTiles(bottom3Rows, 3, this.#config.CELL_WIDTH);
+      const [_, newScore] = this.scoreTiles(
+        bottom3Rows,
+        3,
+        this.#config.CELL_WIDTH,
+      );
       score = newScore;
       attempts++;
-      
+
       // console.log(`Attempt ${attempts}: Generated row with score ${score}`);
-      
+
       if (attempts >= MAX_ATTEMPTS) {
-        console.warn('Failed to generate valid row after max attempts');
+        console.warn("Failed to generate valid row after max attempts");
         break;
       }
     } while (score !== 0);
@@ -380,7 +397,12 @@ export class Game {
   }
 
   private clearCanvas() {
-    this.#ctx?.clearRect(0, 0, this.#config.CANVAS_WIDTH, this.#config.CANVAS_HEIGHT);
+    this.#ctx?.clearRect(
+      0,
+      0,
+      this.#config.CANVAS_WIDTH,
+      this.#config.CANVAS_HEIGHT,
+    );
   }
 
   private allowedCursorMoves() {
@@ -434,7 +456,7 @@ export class Game {
 
   private drawGrid() {
     if (this.#ctx === undefined) {
-      return
+      return;
     }
     this.clearCanvas();
     let x, y;
@@ -471,7 +493,7 @@ export class Game {
     c: Tile | null = null,
     s = this.#config.SQUARE_SIZE,
   ) {
-    if (this.#ctx === undefined) return
+    if (this.#ctx === undefined) return;
     this.#ctx.beginPath();
     this.#ctx.moveTo(x, y);
     this.#ctx.lineTo(x + s, y);
