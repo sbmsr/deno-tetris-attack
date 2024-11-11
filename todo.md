@@ -18,8 +18,8 @@
   - [x] get game state
   - [x] get score
 - [x] show the score
-- [ ] qTable has nulls in wrong place
-- [ ] qTable needs to make sense
+- [ ] determine most important aspects of state
+- [ ] model this state in a dimensionally efficient way
 
 # bugs
 

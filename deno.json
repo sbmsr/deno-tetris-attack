@@ -4,6 +4,19 @@
   },
   "compilerOptions": {
     "strict": true,
-    "lib": ["dom", "dom.iterable", "esnext", "deno.ns"]
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext",
+      "deno.ns"
+    ]
+  },
+  "deploy": {
+    "project": "e9665e6f-e4bc-4aed-812b-100a57c34e78",
+    "exclude": [
+      "**/node_modules"
+    ],
+    "include": [],
+    "entrypoint": "main.ts"
   }
 }

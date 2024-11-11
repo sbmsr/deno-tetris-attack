@@ -13,27 +13,27 @@
       const qTableText = await qTableResponse.text();
       const qTable = new Map(Object.entries(JSON.parse(qTableText)));
 
-      const botToggle = document.getElementById("bot-toggle");
-      let bot;
+      // const botToggle = document.getElementById("bot-toggle");
+      // let bot;
 
-      botToggle.addEventListener("click", async () => {
-        if (!bot) {
-          // Initialize bot with loaded Q-table, 100ms play rate
-          bot = new Bot(qTable, 100, window.game);
-          bot.start();
-          botToggle.textContent = "Disable Bot Mode";
-        } else {
-          bot.stop();
-          bot = null;
-          botToggle.textContent = "Enable Bot Mode";
-        }
-      });
+      // botToggle.addEventListener("click", async () => {
+      //   if (!bot) {
+      //     // Initialize bot with loaded Q-table, 100ms play rate
+      //     bot = new Bot(qTable, 100, window.game);
+      //     bot.start();
+      //     botToggle.textContent = "Disable Bot Mode";
+      //   } else {
+      //     bot.stop();
+      //     bot = null;
+      //     botToggle.textContent = "Enable Bot Mode";
+      //   }
+      // });
     </script>
   </head>
   <body>
     <canvas id="canvas"></canvas>
     <div id="score-indicator">Score: 0</div>
-    <button id="bot-toggle">Enable Bot Mode</button>
+    <!-- <button id="bot-toggle">Enable Bot Mode</button>
     <style>
       #bot-toggle {
         padding: 10px 20px;
@@ -48,6 +48,6 @@
       #bot-toggle:hover {
         background-color: #45a049;
       }
-    </style>
+    </style> -->
   </body>
 </html>

@@ -2,7 +2,7 @@ import { bundle } from "jsr:@deno/emit";
 
 const gameSourceURL = new URL("./src/game.ts", import.meta.url);
 const botSourceURL = new URL("./src/bot.ts", import.meta.url);
-const trainingSourceURL = new URL("./src/training/index.ts", import.meta.url);
+const trainingSourceURL = new URL("./src/training.ts", import.meta.url);
 const libUrl = new URL("./src/lib.ts", import.meta.url);
 
 Deno.serve(async (req: Request) => {

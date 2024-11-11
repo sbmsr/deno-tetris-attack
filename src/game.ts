@@ -1,8 +1,7 @@
 import { getRandomNumber } from "./lib.ts";
 
-
-// export const tileOptions = ["z", "i", "e", "w", "a"] as const;
-export const tileOptions = ["z", "a"] as const;
+// const tileOptions = ["z", "i", "e", "w", "a"] as const;
+const tileOptions = ["z", "a"] as const; // simplified for now
 export type Tile = typeof tileOptions[number] | undefined;
 
 export type Direction = "up" | "down" | "left" | "right";
@@ -29,6 +28,7 @@ export type GameConfig = {
   CANVAS_HEIGHT: number;
   CANVAS_WIDTH: number;
   STARTER_ROWS: number;
+  TILES: readonly string[];
 };
 
 export const DefaultGameConfig: GameConfig = Object.freeze({
@@ -40,6 +40,7 @@ export const DefaultGameConfig: GameConfig = Object.freeze({
   CANVAS_HEIGHT: 600,
   CANVAS_WIDTH: 300,
   STARTER_ROWS: 4,
+  TILES: tileOptions,
 });
 
 export class Game {

@@ -1,10 +1,7 @@
-import { ALLOWED_MOVES, Game, type GameConfig } from "../game.ts";
-import {
-  getGridAreaAroundCursor,
-  getRandomNumber,
-} from "../lib.ts";
+import { ALLOWED_MOVES, Game, type GameConfig, type Grid } from "./game.ts";
+import { getRandomNumber } from "./lib.ts";
 
-const EPISODES = 1000;
+const EPISODES = 100_000;
 
 export class GameEnvironment {
   private game: Game;
@@ -12,11 +9,12 @@ export class GameEnvironment {
     SQUARE_SIZE: 50,
     MS_BETWEEN_RENDERS: 1,
     MS_BETWEEN_ROW_INSERT: 10,
-    CELL_HEIGHT: 12,
-    CELL_WIDTH: 6,
+    CELL_HEIGHT: 4,
+    CELL_WIDTH: 3,
     CANVAS_HEIGHT: 600,
     CANVAS_WIDTH: 300,
-    STARTER_ROWS: 4,
+    STARTER_ROWS: 1,
+    TILES: ["z", "a"] as const,
   });
 
   constructor(headless = true) {
@@ -29,19 +27,55 @@ export class GameEnvironment {
   }
 
   getState() {
-    // Represent just the tiles around cursor and score
-    const grid = getGridAreaAroundCursor(this.game.grid, this.game.cursor);
-    const score = this.game.score;
-    const cursor = this.game.cursor;
-    return { grid, score, cursor };
+    return { grid: this.game.grid, score: this.game.score, cursor: this.game.cursor };
+  }
+
+  // Find the highest tile's position
+  private getHighestTileRow(): number {
+    let highestTileRow = 0;
+    for (let y = 0; y < this.game.grid.length; y++) {
+      if (
+        this.game.grid[y].some((cell) => cell !== undefined)
+      ) {
+        highestTileRow = y;
+        break;
+      }
+    }
+    return highestTileRow;
+  }
+
+  scanForPotentialScores(grid: Grid) {
+    let potentialScores = 0;
+
+    // Scan horizontally for adjacent matching tiles
+    for (let y = 0; y < grid.length; y++) {
+      for (let x = 0; x < grid[y].length - 1; x++) {
+        const current = grid[y][x];
+        const next = grid[y][x + 1];
+        if (current && next && current === next) {
+          potentialScores++;
+        }
+      }
+    }
+
+    // Scan vertically for adjacent matching tiles
+    for (let y = 0; y < grid.length - 1; y++) {
+      for (let x = 0; x < grid[y].length; x++) {
+        const current = grid[y][x];
+        const next = grid[y + 1][x];
+        if (current && next && current === next) {
+          potentialScores++;
+        }
+      }
+    }
+
+    return potentialScores;
   }
 
   async step(action: string) {
-    const { score: oldScore } = this.getState();
-    // Create a simple event-like object with the key property
+    const { score: oldScore, grid: oldGrid } = this.getState();
     this.game.handleAction({ key: action } as any);
 
-    // Introduce a delay between renders
     await new Promise((resolve) =>
       setTimeout(resolve, this.config.MS_BETWEEN_RENDERS)
     );
@@ -49,36 +83,20 @@ export class GameEnvironment {
     // After the action, capture the new state, reward, and game status
     const newState = this.getState();
     const { score: newScore } = newState;
-    // More nuanced reward structure
-    let reward = -0.01; // Smaller penalty for each move to encourage exploration
+
+    let reward = 0;
 
     if (newScore > oldScore) {
       reward = Math.min(30, newScore - oldScore); // Proportional reward for scoring
     } else {
       // Check if the move created potential scoring opportunities
       const { grid } = newState;
-      const [cursorY, cursorX] = this.game.cursor;
 
-      // Look for pairs of matching tiles that could lead to scoring
-      const cursorRow = grid[1]; // Current row is always index 1 in our 3-row view
-      if (cursorRow) {
-        // Check horizontal pairs
-        for (let x = 0; x < cursorRow.length - 1; x++) {
-          if (cursorRow[x] !== undefined && cursorRow[x] === cursorRow[x + 1]) {
-            reward += 0.1; // Small reward for creating/maintaining pairs
-          }
-        }
+      const oldPotentialScores = this.scanForPotentialScores(oldGrid);
+      const newPotentialScores = this.scanForPotentialScores(grid);
 
-        // Check vertical pairs
-        for (let x = 0; x < cursorRow.length; x++) {
-          if (
-            grid[0] && grid[2] && // Check above and below exist
-            cursorRow[x] !== undefined &&
-            (cursorRow[x] === grid[0][x] || cursorRow[x] === grid[2][x])
-          ) {
-            reward += 0.1; // Small reward for vertical pairs
-          }
-        }
+      if (newPotentialScores > oldPotentialScores) {
+        reward += 10; // Small boost for creating more potential scoring opportunities
       }
     }
     const done = !this.game.playing;
@@ -93,7 +111,12 @@ export class QLearningAgent {
   #discountFactor: number;
   #explorationRate: number;
 
-  constructor(learningRate = 0.2, discountFactor = 0.7, explorationRate = 1.0) {
+  constructor(
+    learningRate = 0.1,
+    discountFactor = 0.95,
+    explorationRate = 1.0,
+    private minExplorationRate = 0.001,
+  ) {
     this.#learningRate = learningRate;
     this.#discountFactor = discountFactor;
     this.#explorationRate = explorationRate;
@@ -141,13 +164,26 @@ export class QLearningAgent {
   }
 
   decreaseExplorationRate() {
-    this.#explorationRate *= 0.99;
+    this.#explorationRate = Math.max(
+      this.minExplorationRate,
+      this.#explorationRate * 0.9995,
+    );
   }
+}
+
+function getState(grid: Grid) {
+  return JSON.stringify(
+    { grid },
+    (_, value) => value === undefined ? "undefined" : value, // needed b/c stringify turns undefined to null
+  );
 }
 
 export async function startTraining(headless = true) {
   const env = new GameEnvironment(headless);
   const agent = new QLearningAgent();
+  let bestScore = 0;
+  let highestScore = 0;
+  let highestScoreEpisode = 0;
 
   for (let episode = 0; episode < EPISODES; episode++) {
     let { grid, cursor } = env.reset();
@@ -157,15 +193,22 @@ export async function startTraining(headless = true) {
     while (!done) {
       const state = JSON.stringify(
         { grid, cursor },
-        (_, value) => value === undefined ? "undefined" : value,
+        (_, value) => value === undefined ? "undefined" : value, // needed b/c stringify turns undefined to null
       );
       const action = agent.chooseAction(state, ALLOWED_MOVES);
 
       const { newState, reward, done: isDone } = await env.step(action);
-      const nextState = JSON.stringify(newState);
+      const nextState = JSON.stringify(
+        { grid: newState.grid, cursor: newState.cursor },
+        (_, value) => value === undefined ? "undefined" : value, // needed b/c stringify turns undefined to null
+      );
 
       agent.updateQValue(state, action, reward, nextState);
-      agent.decreaseExplorationRate();
+
+      if (env.getState().score > bestScore) {
+        agent.decreaseExplorationRate();
+        bestScore = env.getState().score;
+      }
 
       done = isDone;
       ({ grid } = newState);
@@ -186,11 +229,23 @@ export async function startTraining(headless = true) {
       }
     }
 
-    console.log(`Episode ${episode + 1} completed with score ${env.getState().score}.`);
+    const finalScore = env.getState().score;
+    if (finalScore > highestScore) {
+      highestScore = finalScore;
+      highestScoreEpisode = episode;
+    }
+
+
+
+    console.log(
+      `Episode ${
+        episode + 1
+      } completed with score ${finalScore}. Highest score so far: ${highestScore} at episode ${highestScoreEpisode}`,
+    );
   }
 }
 
 // if called directly from cli
 if (import.meta.main) {
-  startTraining(); 
+  startTraining();
 }
