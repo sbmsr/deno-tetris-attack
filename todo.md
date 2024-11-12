@@ -18,8 +18,13 @@
   - [x] get game state
   - [x] get score
 - [x] show the score
-- [ ] determine most important aspects of state
-- [ ] model this state in a dimensionally efficient way
+- [ ] fix bug where x x a x => x x x doesnt collapse and score points
+- [ ] fix bug where {\"activeArea\":[\"undefined\",\"z\",\"z\",\"z\",null,\"a\"] is a possible key
+- [ ] reward when gap is increased between tallest row and top of board (i.e. move tiles into empty slots)
+- [ ] what if instead of raw grid, you took every 2 horizontally adj. cells, and tracked if === or not. 
+  - ex x a x a       false false
+  -    x a x x  ->   false true
+  -    a x a x       false false
 
 # bugs
 

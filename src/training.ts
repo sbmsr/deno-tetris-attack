@@ -99,7 +99,7 @@ export class GameEnvironment {
 
     let reward = 0;
 
-    // Apply heavy penalties for wasteful moves
+    // Apply penalties for invalid moves (keep these)
     if ((isAtRightEdge && action === "ArrowRight") || 
         (isAtLeftEdge && action === "ArrowLeft") ||
         (isAtTopEdge && action === "ArrowUp") ||
@@ -107,57 +107,58 @@ export class GameEnvironment {
       reward -= 50;
     }
 
-    if (isOnSameTiles && action === " ") {
-      reward -= 50; // swapped same tiles, which is no-op
-    }
-    
+    // Execute the move
     this.game.handleAction({ key: action } as any);
-
-    await new Promise((resolve) =>
-      setTimeout(resolve, this.config.MS_BETWEEN_RENDERS)
-    );
-
-    // After the action, capture the new state, reward, and game status
+    await new Promise((resolve) => setTimeout(resolve, this.config.MS_BETWEEN_RENDERS));
+    
     const newState = this.getState();
-    const { score: newScore } = newState;
+    const { score: newScore, grid: newGrid, cursor: newCursor } = newState;
 
-    // Check if we moved to a blank spot
-    const { grid: newGrid, cursor: newCursor } = newState;
-    if (newGrid[newCursor[0]][newCursor[1]] === undefined && 
-        newGrid[newCursor[0]][newCursor[1] + 1] === undefined) {
-      reward -= 50; // Penalty for moving to empty space
-    }
-
+    // Scoring reward (keep this)
     if (newScore > oldScore) {
-      reward = Math.min(30, newScore - oldScore); // Proportional reward for scoring
-    } 
-
-    // Check if the move created potential scoring opportunities
-    if (action === " ") { // Only check after swaps
-      const oldPotentialScores = GameEnvironment.scanForPotentialScores(oldGrid);
-      const newPotentialScores = GameEnvironment.scanForPotentialScores(newGrid);
-
-      if (newPotentialScores > oldPotentialScores) {
-        reward += 10; // Small boost for creating more potential scoring opportunities
-      }
+      reward = Math.min(30, newScore - oldScore);
     }
 
-    // Check if we moved to a position where swapping would create a match
-    if (action !== " ") { // Only check cursor moves, not swaps
-      // Simulate the swap
-      const simGrid = JSON.parse(JSON.stringify(newGrid));
-      const [y, x] = newCursor;
-      [simGrid[y][x], simGrid[y][x + 1]] = [simGrid[y][x + 1], simGrid[y][x]];
+    // New rewards focused on bottom rows
+    if (action === " ") { // For swap actions
+      // Get the bottom 3 rows before and after swap
+      const oldBottom = oldGrid.slice(-3);
+      const newBottom = newGrid.slice(-3);
       
-      // Check if the simulated swap would create more scoring opportunities
-      const simPotentialScores = GameEnvironment.scanForPotentialScores(simGrid);
-      if (simPotentialScores > 0) {
-        reward += 5; // Small reward for moving to a position that enables scoring
+      // Check if the swap created new matches in bottom rows
+      const oldMatches = GameEnvironment.scanForPotentialScores(oldBottom);
+      const newMatches = GameEnvironment.scanForPotentialScores(newBottom);
+      
+      if (newMatches > oldMatches) {
+        reward += 15; // Bigger reward for creating matches in bottom rows
+      }
+      
+      // Penalize swaps that don't create potential matches in bottom rows
+      if (newMatches === 0) {
+        reward -= 20;
+      }
+    } else { // For cursor movement
+      // Reward moving towards potential matches in bottom rows
+      const bottomRows = newGrid.slice(-3);
+      const [y, x] = newCursor;
+      
+      // Only check if cursor is in bottom 3 rows
+      if (y >= newGrid.length - 3) {
+        // Simulate swap at new cursor position
+        const simGrid = JSON.parse(JSON.stringify(bottomRows));
+        const relativeY = y - (newGrid.length - 3); // Convert to relative position in bottomRows
+        [simGrid[relativeY][x], simGrid[relativeY][x + 1]] = [simGrid[relativeY][x + 1], simGrid[relativeY][x]];
+        
+        const potentialMatches = GameEnvironment.scanForPotentialScores(simGrid);
+        if (potentialMatches > 0) {
+          reward += 10; // Reward for moving to positions that enable matches
+        }
+      } else {
+        reward -= 5; // Small penalty for staying in top rows
       }
     }
 
     const done = !this.game.playing;
-
     return { newState, reward, done };
   }
 }
@@ -223,27 +224,56 @@ export class QLearningAgent {
   decreaseExplorationRate() {
     this.#explorationRate = Math.max(
       this.minExplorationRate,
-      this.#explorationRate * 0.9995,
+      this.#explorationRate * 0.99995
     );
   }
 }
 
-function getCompactGameState(grid: Grid, cursor: [number, number]) {
+function getCompactGameState(grid: Grid, cursor: [number, number]): string {
+  // Handle empty grid case
+  if (grid.length === 0) {
+    return JSON.stringify({ horizontal: [], vertical: [] });
+  }
+
+  // Only look at bottom 3 rows
+  const bottomRows = grid.slice(-3);
+  
+  // Get horizontal adjacencies (true/false only)
+  const horizontalAdjacencies = bottomRows.map(row => {
+    const comparisons = [];
+    for (let i = 0; i < row.length - 1; i++) {
+      // If both tiles are undefined, return null. Otherwise if either is undefined, return false
+      comparisons.push(
+        row[i] === undefined && row[i + 1] === undefined ? null :
+        row[i] === undefined || row[i + 1] === undefined ? false :
+        row[i] === row[i + 1]
+      );
+    }
+    return comparisons;
+  });
+
+  // Get vertical adjacencies between cursor row and the one below
+  const verticalAdjacencies = [];
+  // Handle case where bottomRows is empty
+  if (bottomRows.length === 0) {
+    return JSON.stringify({ horizontal: [], vertical: [] });
+  }
+
+  for (let x = 0; x < bottomRows[0].length; x++) {
+    // If cursor is at bottom row or cursor row is out of bounds, push null
+    verticalAdjacencies.push(
+      cursor[1] >= grid.length - 1 || cursor[1] >= bottomRows.length - 1 ? null :
+      bottomRows[cursor[1]]?.[x] !== undefined && 
+      bottomRows[cursor[1] + 1]?.[x] !== undefined &&
+      bottomRows[cursor[1]][x] === bottomRows[cursor[1] + 1][x]
+    );
+  }
+
   return JSON.stringify({
-    // Just look at the active area (cursor position and adjacent cells)
-    activeArea: [
-      cursor[0] > 0 ? grid[cursor[0] - 1][cursor[1]] : null, // Above current
-      cursor[0] > 0 && cursor[1] < grid[0].length - 1 ? grid[cursor[0] - 1][cursor[1] + 1] : null, // Above right
-      grid[cursor[0]][cursor[1]], // Current position
-      cursor[1] < grid[0].length - 1 ? grid[cursor[0]][cursor[1] + 1] : null, // Right position
-      cursor[0] + 1 < grid.length - 1 ? grid[cursor[0] + 1][cursor[1]] : null, // Below current
-      cursor[0] < grid.length - 1 && cursor[1] < grid[0].length - 1 ? grid[cursor[0] + 1][cursor[1] + 1] : null, // Below right
-    ],
-    cursor, // Just need x position since y context is in activeArea
-    potentialMatches: GameEnvironment.scanForPotentialScores(grid),
-    tilesToTop: cursor[0] - GameEnvironment.getHighestTileRow(grid) // Distance from cursor to highest tile
-  }, (_, v) => { return v === undefined ? "undefined" : v; } // retain undefined
-);
+    horizontal: horizontalAdjacencies,
+    vertical: verticalAdjacencies,
+    // cursor: [cursor[0] % 2, cursor[1]] // Relative cursor position within bottom 2 rows
+  });
 }
 
 export async function startTraining(headless = true) {
@@ -267,8 +297,10 @@ export async function startTraining(headless = true) {
 
       agent.updateQValue(state, action, reward, nextState);
 
+      // Decrease exploration rate every step, with bonus decrease on new best score
+      agent.decreaseExplorationRate();
       if (env.getState().score > bestScore) {
-        agent.decreaseExplorationRate();
+        agent.decreaseExplorationRate(); // Additional decrease for new best score
         bestScore = env.getState().score;
       }
 
