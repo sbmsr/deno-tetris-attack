@@ -55,22 +55,5 @@ To set up the development environment, follow these steps:
 
 4. Make your changes and the server will automatically reload with your updates.
 
-## Contribution Guidelines
-We welcome contributions! Please follow these steps to contribute:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bugfix:
-   ```bash
-   git checkout -b my-feature-branch
-   ```
-3. Make your changes and commit them with clear messages.
-4. Push your changes to your forked repository:
-   ```bash
-   git push origin my-feature-branch
-   ```
-5. Open a pull request on the main repository.
-
-For more detailed guidelines, please refer to our [contributing guide](CONTRIBUTING.md) (if available).
-
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
