@@ -1,6 +1,6 @@
 # Deno Tetris Attack
 
-A Tetris Attack clone, built on Deno.
+A Tetris Attack clone, built on Deno, with Bot support.
 
 ## Table of Contents
 - [Description](#description)
