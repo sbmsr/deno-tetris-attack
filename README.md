@@ -54,6 +54,3 @@ To set up the development environment, follow these steps:
    ```
 
 4. Make your changes and the server will automatically reload with your updates.
-
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
